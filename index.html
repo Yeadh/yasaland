@@ -114,12 +114,19 @@ var spr=null,cur=0,found=0,busy=true,hintT=0,tgt=null,jx=0,jy=0,keys={};
 var LC=["#e53935","#fb8c00","#fdd835","#43a047","#00acc1","#1e88e5","#8e24aa","#d81b60"];
 function mk(L,i){var c=document.createElement("canvas");c.width=c.height=256;var x=c.getContext("2d");x.font="bold 200px Arial Rounded MT Bold,Arial,sans-serif";x.textAlign="center";x.textBaseline="middle";x.lineJoin="round";x.strokeStyle="#fff";x.lineWidth=34;x.strokeText(L,128,140);x.strokeStyle="#222";x.lineWidth=12;x.strokeText(L,128,140);x.fillStyle=LC[i%8];x.fillText(L,128,140);return new THREE.CanvasTexture(c)}
 spr=new THREE.Sprite(new THREE.SpriteMaterial({map:mk("A",0),fog:false,depthTest:false}));spr.renderOrder=99;spr.scale.set(3.8,3.8,1);S.add(spr);
-function AC(){try{return window._ac=window._ac||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+function AC(){try{var a=window._ac=window._ac||new(window.AudioContext||window.webkitAudioContext)();if(a.state==="suspended"&&a.resume)a.resume();return a}catch(e){}}
 function beep(f,d,t){var a=AC();if(!a)return;var o=a.createOscillator(),v=a.createGain();o.type=t||"sine";o.frequency.value=f;v.gain.value=.15;o.connect(v);v.connect(a.destination);o.start();v.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.stop(a.currentTime+d)}
 var VG='girl';
-function vc(){var v=(speechSynthesis.getVoices()||[]).filter(function(x){return /^en/i.test(x.lang)}),re=VG=='girl'?/female|samantha|zira|karen|victoria|susan|aria|jenny|tessa|fiona|moira/i:/male|daniel|david|alex|mark|guy|fred|ryan|james|tom|iom|iol|tpd|rjs|gbd/i,m=v.filter(function(x){return re.test(x.name)});if(VG=='boy')m=m.filter(function(x){return !/female/i.test(x.name)});return m[0]||(VG=='boy'?v[v.length-1]:v[0])||null}
-function sp1(s,cb){var u=new SpeechSynthesisUtterance(s);u.lang='en-US';var v=vc();if(v)u.voice=v;u.pitch=VG=='girl'?1.5:.8;u.rate=.7;u.volume=.85;if(cb)u.onend=cb;speechSynthesis.speak(u)}
-function say(s,s2,gap,f){try{speechSynthesis.cancel();var d=0,go=function(){if(d)return;d=1;if(s2){sp1(s2);if(f)f()}};sp1(s,function(){setTimeout(go,gap||0)});if(s2)setTimeout(go,(gap||0)+1500)}catch(e){}}
+function vc(){var v=((TTSOK&&speechSynthesis.getVoices())||[]).filter(function(x){return /^en/i.test(x.lang)}),re=VG=='girl'?/female|samantha|zira|karen|victoria|susan|aria|jenny|tessa|fiona|moira/i:/male|daniel|david|alex|mark|guy|fred|ryan|james|tom|iom|iol|tpd|rjs|gbd/i,m=v.filter(function(x){return re.test(x.name)});if(VG=='boy')m=m.filter(function(x){return !/female/i.test(x.name)});return m[0]||(VG=='boy'?v[v.length-1]:v[0])||null}
+var TTSOK=("speechSynthesis" in window)&&typeof SpeechSynthesisUtterance!=="undefined";
+var IAB=/FBAN|FBAV|FB_IAB|FBIOS|FB4A|Instagram|Messenger|Line\/|MicroMessenger|Snapchat|TikTok/i.test(navigator.userAgent);
+var useOnline=!TTSOK||IAB,_au=null,_uref=[];
+var SIL="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+function unlockAudio(){try{_au=_au||new Audio();_au.src=SIL;var p=_au.play();if(p&&p.catch)p.catch(function(){})}catch(e){}try{if(TTSOK){var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}}catch(e){}}
+function stopSp(){try{if(TTSOK)speechSynthesis.cancel()}catch(e){}try{if(_au){_au.onended=_au.onerror=null;_au.pause()}}catch(e){}}
+function olSay(s,cb){var done=0,fin=function(){if(done)return;done=1;if(cb)cb()};try{var a=_au=_au||new Audio();a.onended=fin;a.onerror=fin;a.src="https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q="+encodeURIComponent(s);try{a.preservesPitch=a.webkitPreservesPitch=a.mozPreservesPitch=false}catch(e){}a.playbackRate=VG=="girl"?1.05:.85;var p=a.play();if(p&&p.catch)p.catch(fin);setTimeout(fin,6000)}catch(e){fin()}}
+function sp1(s,cb){if(useOnline){olSay(s,cb);return}try{var u=new SpeechSynthesisUtterance(s);u.lang='en-US';var v=vc();if(v)u.voice=v;u.pitch=VG=='girl'?1.5:.8;u.rate=.7;u.volume=.85;var fin=function(){if(cb){var c=cb;cb=null;c()}};u.onend=fin;u.onerror=fin;_uref.push(u);if(_uref.length>8)_uref.shift();speechSynthesis.speak(u);if(cb)setTimeout(fin,Math.max(2500,s.length*350))}catch(e){useOnline=true;olSay(s,cb)}}
+function say(s,s2,gap,f){try{stopSp();var d=0,go=function(){if(d)return;d=1;if(s2){sp1(s2);if(f)f()}};sp1(s,function(){setTimeout(go,gap||0)});if(s2)setTimeout(go,(gap||0)+(useOnline?5000:1500))}catch(e){}}
 function fx(){for(var i=0;i<7;i++){var d=document.createElement("div");d.className="fx";d.textContent=["⭐","🌟","✨","🎈"][i%4];d.style.left=(innerWidth/2+(i-3)*28)+"px";d.style.top=(innerHeight/2)+"px";document.body.appendChild(d);setTimeout(function(n){n.remove()},1400,d)}}
 function setL(){var L=String.fromCharCode(65+cur);spr.material.map=mk(L,cur);spr.material.needsUpdate=true;spr.material.fog=false;spr.position.set(P[cur][0],3.2,P[cur][1]);spr.visible=true;$("task").innerHTML="Find <b>"+L+"</b>";$("score").textContent="⭐ "+found+"/26";say("Find the letter "+L);busy=false}
 function start(){found=0;cur=0;bear.position.set(0,0,22);tgt=null;setL()}
@@ -127,13 +134,13 @@ var amb=null,ambOn=true;
 function chirp(a,T){for(var j=0;j<2;j++){var o=a.createOscillator(),v=a.createGain(),s=T+j*.18;o.frequency.setValueAtTime(3000+Math.random()*800,s);o.frequency.exponentialRampToValueAtTime(4300,s+.09);o.connect(v);v.connect(amb);v.gain.setValueAtTime(.006,s);v.gain.exponentialRampToValueAtTime(.001,s+.1);o.start(s);o.stop(s+.12)}}
 function startAmb(){var a=AC();if(!a||amb)return;amb=a.createGain();amb.connect(a.destination);[130.8,196,261.6].forEach(function(f){var o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=.016;o.connect(g);g.connect(amb);o.start()});var nb=a.createBuffer(1,a.sampleRate*2,a.sampleRate),nd=nb.getChannelData(0);for(var q2=0;q2<nd.length;q2++)nd[q2]=Math.random()*2-1;var ns=a.createBufferSource(),lp=a.createBiquadFilter(),wg=a.createGain();ns.buffer=nb;ns.loop=true;lp.type='lowpass';lp.frequency.value=380;wg.gain.value=.05;ns.connect(lp);lp.connect(wg);wg.connect(amb);ns.start();var nt=[261.6,293.7,329.6,392,440,523.3,392,329.6],n=0;setInterval(function(){if(!ambOn)return;var o=a.createOscillator(),v=a.createGain(),T=a.currentTime,f=nt[n%8]*(n%16<8?1:.75);n++;o.type='sine';o.frequency.value=f;o.connect(v);v.connect(amb);v.gain.setValueAtTime(0,T);v.gain.linearRampToValueAtTime(.035,T+.3);v.gain.exponentialRampToValueAtTime(.001,T+2.2);o.start(T);o.stop(T+2.3);if(Math.random()<.06)chirp(a,T+.4)},1100)}
 $("mb").onclick=function(){ambOn=!ambOn;if(amb)amb.gain.value=ambOn?1:0;$("mb").textContent=ambOn?"🎵":"🔇"};
-$("go").onclick=function(){$("st").style.display="none";AC();startAmb();start()};
+$("go").onclick=function(){$("st").style.display="none";unlockAudio();AC();startAmb();if(!useOnline&&TTSOK)setTimeout(function(){try{if(!speechSynthesis.getVoices().length)useOnline=true}catch(e){useOnline=true}},1200);start()};
 $("rs").onclick=function(){$("end").style.display="none";$("st").style.display="flex"};
 $("hb").onclick=function(){hintT=6;$("ar").style.display="block";spr.material.fog=false};
 $("tp").onclick=function(){if(!busy)got()};
 var gen=0,E=['🍎','⚽','🐱','🐶','🥚','🐟','🐐','🎩','🍦','🏺','🪁','🦁','🥭','🐦','🍊','🦜','👸','🐰','☀️','🐯','☂️','🚐','💧','🎹','⛵','🦓'];
 function showPic(n){var p=$('pic');p.innerHTML=E[n]+"<div style='font-size:30px;color:#fff;font-weight:800'>"+W[n]+"</div>";p.style.display='flex';p.className='';void p.offsetWidth;p.className='s';setTimeout(function(){p.style.display='none'},3500)}
-$("hm").onclick=function(){gen++;try{speechSynthesis.cancel()}catch(e){}busy=true;spr.visible=false;$("tp").style.display="none";$("pic").style.display="none";$("ar").style.display="none";$("msg").textContent="";$("end").style.display="none";$("st").style.display="flex"};
+$("hm").onclick=function(){gen++;stopSp();busy=true;spr.visible=false;$("tp").style.display="none";$("pic").style.display="none";$("ar").style.display="none";$("msg").textContent="";$("end").style.display="none";$("st").style.display="flex"};
 [].forEach.call(document.querySelectorAll('.vb'),function(b){b.onclick=function(){VG=b.dataset.v;[].forEach.call(document.querySelectorAll('.vb'),function(x){x.className='cb vb'+(x===b?' on':'')});say('Hello! Lets find the letters!')}});
 function got(){busy=true;$("tp").style.display="none";var L=String.fromCharCode(65+cur);spr.visible=false;beep(660,.15);fx();(function(n){say(L,L+" for "+W[n],600,function(){showPic(n)})})(cur);$("msg").textContent="Great! "+L+" for "+W[cur];found++;cur++;$("score").textContent="⭐ "+found+"/26";hintT=0;$("ar").style.display="none";
 if(cur>=26){var g1=gen;setTimeout(function(){if(g1!=gen)return;$("end").style.display="flex";say("Great job!")},6000);return}
@@ -191,4 +198,14 @@ if(!busy){$("msg").textContent=nr?"👆 Tap it!":"";$("tp").style.display=nr?"fl
 $("ar").style.display=busy?"none":"block";$("ar").style.transform="rotate("+Math.atan2(spr.position.x-p.x,-(spr.position.z-p.z))+"rad)";if(hintT>0)hintT-=dt}
 animl(dt);animl3(dt);R.render(S,cam)}
 loop();
-</script></body></html>
+</script><div id="iab" style="display:none;position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#fff3cd;color:#5c4400;border:2px solid #f9a825;border-radius:14px;padding:10px 12px;font:600 14px/1.4 Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25)">
+<div>🔊 Facebook-er vitore voice na-o ashte pare. Bhalo voice-er jonno <b>Chrome / Safari</b>-e kholun (⋯ menu &rarr; <i>Open in browser</i>).</div>
+<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+<button id="iabC" style="padding:6px 12px;border:0;border-radius:10px;background:#43a047;color:#fff;font-weight:700">Chrome-e kholun</button>
+<button id="iabL" style="padding:6px 12px;border:0;border-radius:10px;background:#1e88e5;color:#fff;font-weight:700">Link copy</button>
+<button id="iabX" style="padding:6px 12px;border:0;border-radius:10px;background:#bbb;color:#222;font-weight:700">&times;</button></div></div>
+<script>(function(){if(!IAB)return;var b=document.getElementById("iab");b.style.display="block";var u=location.href;
+document.getElementById("iabX").onclick=function(){b.style.display="none"};
+document.getElementById("iabC").onclick=function(){if(/Android/i.test(navigator.userAgent)){location.href="intent://"+u.replace(/^https?:\/\//,"")+"#Intent;scheme=https;package=com.android.chrome;end"}else{alert("Upore dan kone ⋯ tap kore 'Open in Safari' select korun")}};
+document.getElementById("iabL").onclick=function(){try{navigator.clipboard.writeText(u).then(function(){alert("Link copy hoyeche. Chrome/Safari-te paste korun.")},function(){prompt("Link copy korun:",u)})}catch(e){prompt("Link copy korun:",u)}}})();</script>
+</body></html>
